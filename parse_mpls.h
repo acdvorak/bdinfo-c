@@ -97,6 +97,7 @@ typedef struct {
     double time_in_sec;
     double time_out_sec;
     double duration_sec;
+    char duration_formatted[15]; /* HH:MM:SS.mmm */
     stream_clip_list_t stream_clip_list;
     stream_clip_list_t chapter_stream_clip_list;
     double* chapters;
@@ -134,6 +135,9 @@ timecode_to_sec(int32_t timecode);
  */
 char*
 format_duration(double length_sec);
+
+void
+format_duration_to(double length_sec, char* str);
 
 
 /*
@@ -253,6 +257,18 @@ free_playlist_members(playlist_t* playlist);
 
 mpls_file_t
 init_mpls(char* path);
+
+void
+parse_stream_clips(mpls_file_t* mpls_file, playlist_t* playlist);
+
+void
+parse_stream_clip();
+
+void
+parse_chapters(mpls_file_t* mpls_file, playlist_t* playlist);
+
+void
+parse_chapter();
 
 void
 parse_mpls(char* path);

@@ -242,6 +242,7 @@ init_stream_clip_t(stream_clip_t* stream_clip)
     stream_clip->duration_sec = 0;
     stream_clip->relative_time_in_sec = 0;
     stream_clip->relative_time_out_sec = 0;
+    stream_clip->track_count = 0;
     stream_clip->video_count = 0;
     stream_clip->audio_count = 0;
     stream_clip->subtitle_count = 0;
@@ -610,6 +611,10 @@ parse_stream_clips(mpls_file_t* mpls_file, playlist_t* playlist)
 
         *pos_ptr += itemLength - (*pos_ptr - itemStart) + 2;
         
+        streamClip->track_count =
+                streamCountVideo + streamCountAudio +
+                streamCountPG + streamCountIG +
+                streamCountSecondaryVideo + streamCountSecondaryAudio;
         streamClip->video_count = streamCountVideo;
         streamClip->audio_count = streamCountAudio;
         streamClip->subtitle_count = streamCountPG;
@@ -705,12 +710,44 @@ print_playlist_header(mpls_file_t* mpls_file, playlist_t* playlist)
     for (i = 0; i < len; i++)
         printf("%c", '=');
     printf("\n");
+    printf("\n");
 }
 
 void
 print_playlist_details(playlist_t* playlist)
 {
     printf("Playlist duration: %s\n", playlist->duration_formatted);
+    printf("\n");
+}
+
+void
+print_tracks_header(playlist_t* playlist)
+{
+//    int i;
+    char header[1024];
+    sprintf(header, "Tracks (%i):", playlist->stream_clip_list.first->track_count);
+//    size_t len = strlen(header);
+    printf("%s\n", header);
+//    for (i = 0; i < len; i++)
+//        printf("%c", '-');
+//    printf("\n");
+    printf("\n");
+}
+
+void
+print_tracks(playlist_t* playlist)
+{
+    stream_clip_t* first_clip = playlist->stream_clip_list.first;
+    printf("\t type                        # \n");
+    printf("\t ------------------------    --\n");
+    printf("\t Primary Video:              %2i\n", first_clip->video_count);
+    printf("\t Primary Audio:              %2i\n", first_clip->audio_count);
+    printf("\t Subtitle (PGS):             %2i\n", first_clip->subtitle_count);
+    printf("\t Interactive Menu:           %2i\n", first_clip->interactive_menu_count);
+    printf("\t Secondary Video:            %2i\n", first_clip->secondary_video_count);
+    printf("\t Secondary Audio:            %2i\n", first_clip->secondary_audio_count);
+    printf("\t Picture-in-Picture (PiP):   %2i\n", first_clip->pip_count);
+    printf("\n");
 }
 
 void
@@ -724,6 +761,7 @@ print_stream_clips_header(playlist_t* playlist)
 //    for (i = 0; i < len; i++)
 //        printf("%c", '-');
 //    printf("\n");
+    printf("\n");
 }
 
 void
@@ -731,7 +769,7 @@ print_stream_clips(playlist_t* playlist)
 {
     stream_clip_t* clip = playlist->stream_clip_list.first;
     char duration_human[15];
-    printf("\t idx    filename     duration\n");
+    printf("\t idx    filename     duration    \n");
     printf("\t ---    ----------   ------------\n");
     while (clip != NULL)
     {
@@ -739,6 +777,7 @@ print_stream_clips(playlist_t* playlist)
         printf("\t %3i:   %s   %s\n", clip->index + 1, clip->filename, duration_human);
         clip = clip->next;
     }
+    printf("\n");
 }
 
 void
@@ -752,13 +791,14 @@ print_chapters_header(playlist_t* playlist)
 //    for (i = 0; i < len; i++)
 //        printf("%c", '-');
 //    printf("\n");
+    printf("\n");
 }
 
 void
 print_chapters(playlist_t* playlist)
 {
     int i;
-    printf("\t idx    start time\n");
+    printf("\t idx    start time  \n");
     printf("\t ---    ------------\n");
     for(i = 0; i < playlist->chapter_count; i++)
     {
@@ -767,6 +807,7 @@ print_chapters(playlist_t* playlist)
         printf("\t %3i:   %s\n", i + 1, chapter_start_human);
         free(chapter_start_human);
     }
+    printf("\n");
 }
 
 void
@@ -779,17 +820,13 @@ parse_mpls(char* path)
     parse_chapters(&mpls_file, &playlist);
     
     print_playlist_header(&mpls_file, &playlist);
-    printf("\n");
     print_playlist_details(&playlist);
-    printf("\n");
+    print_tracks_header(&playlist);
+    print_tracks(&playlist);
     print_stream_clips_header(&playlist);
-    printf("\n");
     print_stream_clips(&playlist);
-    printf("\n");
     print_chapters_header(&playlist);
-    printf("\n");
     print_chapters(&playlist);
-    printf("\n");
 
     free_playlist_members(&playlist);
     free_mpls_file_members(&mpls_file);

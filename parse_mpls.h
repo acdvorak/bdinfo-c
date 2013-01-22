@@ -75,6 +75,7 @@ typedef struct stream_clip_s {
     double duration_sec;
     double relative_time_in_sec;
     double relative_time_out_sec;
+    int track_count;
     int video_count;
     int audio_count;
     int subtitle_count; /* Presentation Graphics Streams (subtitles) */

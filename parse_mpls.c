@@ -41,6 +41,44 @@ format_duration(double length_sec)
 
 
 /*
+ * Linked list functions
+ */
+
+
+void
+add_stream_clip(stream_clip_list_t* list, stream_clip_t* clip)
+{
+    clip->next = NULL;
+    clip->index = list->count;
+
+    if (list->first == NULL)
+    {
+        list->first = clip;
+    }
+    else
+    {
+        list->last->next = clip;
+    }
+
+    list->last = clip;
+    list->count++;
+}
+
+stream_clip_t*
+get_stream_clip_at(stream_clip_list_t* list, int index)
+{
+    stream_clip_t* clip = list->first;
+    while (clip != NULL)
+    {
+        if (clip->index == index)
+            break;
+        clip = clip->next;
+    }
+    return clip;
+}
+
+
+/*
  * Binary file handling
  */
 
@@ -205,6 +243,15 @@ init_stream_clip_t(stream_clip_t* stream_clip)
     stream_clip->secondary_video_count = 0;
     stream_clip->secondary_audio_count = 0;
     stream_clip->pip_count = 0;
+    stream_clip->index = 0;
+    stream_clip->next = NULL;
+}
+
+void
+init_stream_clip_list_t(stream_clip_list_t* list)
+{
+    list->first = NULL;
+    list->count = 0;
 }
 
 playlist_t
@@ -224,34 +271,10 @@ init_playlist_t(playlist_t* playlist)
     playlist->time_in_sec = 0;
     playlist->time_out_sec = 0;
     playlist->duration_sec = 0;
-    playlist->stream_clips = NULL;
-    playlist->stream_clip_count = 0;
     playlist->chapters = NULL;
     playlist->chapter_count = 0;
-}
-
-
-/*
- * Struct member copying
- */
-
-
-void
-copy_stream_clip(stream_clip_t* src, stream_clip_t* dest)
-{
-    strncpy(dest->filename, src->filename, 11);
-    dest->time_in_sec = src->time_in_sec;
-    dest->time_out_sec = src->time_out_sec;
-    dest->duration_sec = src->duration_sec;
-    dest->relative_time_in_sec = src->relative_time_in_sec;
-    dest->relative_time_out_sec = src->relative_time_out_sec;
-    dest->video_count = src->video_count;
-    dest->audio_count = src->audio_count;
-    dest->subtitle_count = src->subtitle_count;
-    dest->interactive_menu_count = src->interactive_menu_count;
-    dest->secondary_video_count = src->secondary_video_count;
-    dest->secondary_audio_count = src->secondary_audio_count;
-    dest->pip_count = src->pip_count;
+    init_stream_clip_list_t(&playlist->stream_clip_list);
+    init_stream_clip_list_t(&playlist->chapter_stream_clip_list);
 }
 
 
@@ -259,6 +282,21 @@ copy_stream_clip(stream_clip_t* src, stream_clip_t* dest)
  * Struct freeing
  */
 
+
+void
+free_stream_clip_list(stream_clip_list_t* list)
+{
+    stream_clip_t* clip = list->first;
+    stream_clip_t* next = NULL;
+    while (clip != NULL)
+    {
+        next = clip->next;
+        free(clip);
+        clip = next;
+    }
+    list->first = list->last = NULL;
+    list->count = 0;
+}
 
 void
 free_mpls_file_members(mpls_file_t* mpls_file)
@@ -270,6 +308,10 @@ free_mpls_file_members(mpls_file_t* mpls_file)
 void
 free_playlist_members(playlist_t* playlist)
 {
+    // playlist.stream_clip_list contains ALL stream clips;
+    // playlist.chapter_stream_clip_list only contains a subset.
+    // So we only need to free .stream_clip_list nodes.
+    free_stream_clip_list(&playlist->stream_clip_list);
     free(playlist->chapters); playlist->chapters = NULL;
 }
 
@@ -400,20 +442,18 @@ parse_mpls(char* path)
     
     double total_length_sec = 0;
     
-    stream_clip_t* streamClips = (stream_clip_t*) calloc(stream_clip_count, sizeof(stream_clip_t));
-    stream_clip_t* chapterStreamClips = (stream_clip_t*) calloc(stream_clip_count, sizeof(stream_clip_t));
-    
     for(streamClipIndex = 0; streamClipIndex < stream_clip_count; streamClipIndex++)
     {
-        stream_clip_t* streamClip = &streamClips[streamClipIndex];
-        stream_clip_t* chapterStreamClip = &chapterStreamClips[streamClipIndex];
-        
+        stream_clip_t* streamClip = (stream_clip_t*) calloc(1, sizeof(stream_clip_t));
         init_stream_clip_t(streamClip);
+
+        add_stream_clip(&playlist.stream_clip_list, streamClip);
+        add_stream_clip(&playlist.chapter_stream_clip_list, streamClip);
 
         int itemStart = *pos_ptr;
         int itemLength = get_int16_cursor(data, pos_ptr);
         char* itemName = copy_string_cursor(data, pos_ptr, 5); /* e.g., "00504" */
-        char* itemType = copy_string_cursor(data, pos_ptr, 4); /* "M2TS" (or SSIF?) */
+        char* itemType = copy_string_cursor(data, pos_ptr, 4); /* "M2TS" */
         
         // Will always be exactly ten (10) chars
         sprintf(streamClip->filename, "%s.%s", itemName, itemType);
@@ -498,12 +538,13 @@ parse_mpls(char* path)
                 TSStreamClip angleClip =
                     new TSStreamClip(angleFile, angleClipFile);
                 angleClip.AngleIndex = angle + 1;
-                angleClip.TimeIn = streamClip.TimeIn;
-                angleClip.TimeOut = streamClip.TimeOut;
-                angleClip.RelativeTimeIn = streamClip.RelativeTimeIn;
-                angleClip.RelativeTimeOut = streamClip.RelativeTimeOut;
-                angleClip.Length = streamClip.Length;
-                StreamClips.Add(angleClip);
+                angleClip.TimeIn = streamClip->TimeIn;
+                angleClip.TimeOut = streamClip->TimeOut;
+                angleClip.RelativeTimeIn = streamClip->RelativeTimeIn;
+                angleClip.RelativeTimeOut = streamClip->RelativeTimeOut;
+                angleClip.Length = streamClip->Length;
+
+                add_stream_clip(&playlist.stream_clip_list, angleClip);
                 */
             }
             // TODO
@@ -575,8 +616,6 @@ parse_mpls(char* path)
         streamClip->secondary_audio_count = streamCountSecondaryAudio;
         streamClip->pip_count = streamCountPIP;
         
-        copy_stream_clip(streamClip, chapterStreamClip);
-        
 #ifdef DEBUG
         printf("\t\t #V: %i, #A: %i, #PG: %i, #IG: %i, #2A: %i, #2V: %i, #PiP: %i \n",
                 streamCountVideo, streamCountAudio, streamCountPG, streamCountIG,
@@ -619,7 +658,7 @@ parse_mpls(char* path)
             
             int32_t chapterTime = get_int32(chapter + 4);
 
-            stream_clip_t* streamClip = &chapterStreamClips[streamFileIndex];
+            stream_clip_t* streamClip = get_stream_clip_at(&playlist.chapter_stream_clip_list, streamFileIndex);
 
             double chapterSeconds = timecode_to_sec(chapterTime);
 
@@ -645,13 +684,13 @@ parse_mpls(char* path)
         *pos_ptr += CHAPTER_SIZE;
     }
     
-    chapters = (double*) realloc(chapters, validChapterCount * sizeof(double));
+    double* new_chapters = (double*) realloc(chapters, validChapterCount * sizeof(double));
+//    free(chapters);
+    chapters = new_chapters;
 
     playlist.time_in_sec = mpls_file.time_in;
     playlist.time_out_sec = mpls_file.time_out;
     playlist.duration_sec = total_length_sec;
-    playlist.stream_clips = streamClips;
-    playlist.stream_clip_count = stream_clip_count;
     playlist.chapters = chapters;
     playlist.chapter_count = validChapterCount;
     
@@ -673,8 +712,6 @@ parse_mpls(char* path)
     
     printf("\n");
 
-    free(streamClips);
-    free(chapterStreamClips);
     free_playlist_members(&playlist);
     free_mpls_file_members(&mpls_file);
 }

@@ -11,6 +11,7 @@
 #include <libgen.h>
 #include <math.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,10 +46,11 @@ extern "C" {
 
 
 #define DIE(...) die(__FILE__, __LINE__, __VA_ARGS__);
+#define ARRAY_SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
 
 /*
- * Structs
+ * Structs - BD-ROM
  */
 
 typedef struct {
@@ -66,7 +68,7 @@ typedef struct {
     int32_t time_out;
 } mpls_file_t; /* raw data extracted from .mpls file */
 
-typedef struct {
+typedef struct stream_clip_s {
     char filename[11]; /* uppercase - e.g., "12345.M2TS" */
     double time_in_sec;
     double time_out_sec;
@@ -80,15 +82,23 @@ typedef struct {
     int secondary_video_count;
     int secondary_audio_count;
     int pip_count; /* Picture-in-Picture (PiP) */
+    int index;
+    struct stream_clip_s* next;
 } stream_clip_t; /* parsed data from .m2ts + .cpli files */
+
+typedef struct {
+    stream_clip_t* first;
+    stream_clip_t* last;
+    int count;
+} stream_clip_list_t;
 
 typedef struct {
     char filename[11]; /* uppercase - e.g., "00801.MPLS" */
     double time_in_sec;
     double time_out_sec;
     double duration_sec;
-    stream_clip_t* stream_clips;
-    size_t stream_clip_count;
+    stream_clip_list_t stream_clip_list;
+    stream_clip_list_t chapter_stream_clip_list;
     double* chapters;
     size_t chapter_count;
 } playlist_t;
@@ -124,6 +134,18 @@ timecode_to_sec(int32_t timecode);
  */
 char*
 format_duration(double length_sec);
+
+
+/*
+ * Linked list functions
+ */
+
+
+void
+add_stream_clip(stream_clip_list_t* list, stream_clip_t* clip);
+
+stream_clip_t*
+get_stream_clip_at(stream_clip_list_t* list, int index);
 
 
 /*
@@ -199,6 +221,9 @@ create_stream_clip_t();
 void
 init_stream_clip_t(stream_clip_t* stream_clip);
 
+void
+init_stream_clip_list_t(stream_clip_list_t* list);
+
 playlist_t
 create_playlist_t();
 
@@ -207,18 +232,12 @@ init_playlist_t(playlist_t* playlist);
 
 
 /*
- * Struct copying
+ * Struct freeing
  */
 
 
 void
-copy_stream_clip(stream_clip_t* src, stream_clip_t* dest);
-
-
-/*
- * Struct freeing
- */
-
+free_stream_clip_list(stream_clip_list_t* list);
 
 void
 free_mpls_file_members(mpls_file_t* mpls_file);

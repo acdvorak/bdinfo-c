@@ -62,7 +62,7 @@ typedef struct {
 } stream_clip_t; /* .m2ts + .cpli */
 
 typedef struct {
-    char* filename; /* uppercase - e.g., "00801.MPLS" */
+    char filename[11]; /* uppercase - e.g., "00801.MPLS" */
     double time_in_sec;
     double time_out_sec;
     double duration_sec;
@@ -174,7 +174,6 @@ duration_human(double length_sec);
 void
 free_playlist_members(playlist_t* playlist)
 {
-    free(playlist->filename); playlist->filename = NULL;
     free(playlist->chapters); playlist->chapters = NULL;
 }
 

@@ -741,6 +741,8 @@ parse_mpls(FILE* mplsFile)
         free(chapter_start_human);
     }
     
+    printf("\n");
+
     free(streamClips);
     free(chapterStreamClips);
     free_playlist_members(&playlist);
@@ -760,7 +762,7 @@ int main(int argc, char** argv) {
     int i;
     for(i = 1; i < argc; i++)
     {
-        FILE* mplsFile = fopen(argv[1], "r");
+        FILE* mplsFile = fopen(argv[i], "r");
 
         if (mplsFile == NULL)
         {

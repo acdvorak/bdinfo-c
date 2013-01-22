@@ -90,9 +90,21 @@ get_int16(char* bytes);
 int32_t
 get_int32(char* bytes);
 
+/**
+ * Converts a sequence of bytes to an int16_t and advances the cursor position by +2.
+ * @param bytes
+ * @param cursor
+ * @return 
+ */
 int16_t
 get_int16_cursor(char* bytes, int* cursor);
 
+/**
+ * Converts a sequence of bytes to an int32_t and advances the cursor position by +4.
+ * @param bytes
+ * @param cursor
+ * @return 
+ */
 int32_t
 get_int32_cursor(char* bytes, int* cursor);
 
@@ -102,18 +114,44 @@ file_read_int16(FILE* file, int offset);
 int32_t
 file_read_int32(FILE* file, int offset);
 
+/**
+ * Reads a sequence of bytes into an int16_t and advances the cursor position by +2.
+ * @param file
+ * @param offset
+ * @return 
+ */
 int16_t
 file_read_int16_cursor(FILE* file, int* offset);
 
+/**
+ * Reads a sequence of bytes into an int32_t and advances the cursor position by +4.
+ * @param file
+ * @param offset
+ * @return 
+ */
 int32_t
 file_read_int32_cursor(FILE* file, int* offset);
 
 char*
 file_read_string(FILE* file, int offset, int length);
 
+/**
+ * Reads a sequence of bytes into a C string and advances the cursor position by #{length}.
+ * @param file
+ * @param offset
+ * @param length
+ * @return 
+ */
 char*
 file_read_string_cursor(FILE* file, int* offset, int length);
 
+/**
+ * Copies a sequence of bytes into a newly alloc'd C string and advances the cursor position by #{length}.
+ * @param file
+ * @param offset
+ * @param length
+ * @return 
+ */
 char*
 copy_string_cursor(char* bytes, int* offset, int length);
 
@@ -125,6 +163,11 @@ copy_string_cursor(char* bytes, int* offset, int length);
 double
 timecode_in_sec(int32_t timecode);
 
+/**
+ * Converts a duration in seconds to a human-readable string in the format HH:MM:SS.mmm
+ * @param length_sec
+ * @return 
+ */
 char*
 duration_human(double length_sec);
 
@@ -700,6 +743,7 @@ parse_mpls(FILE* mplsFile)
     
     free(streamClips);
     free(chapterStreamClips);
+    free_playlist_members(&playlist);
     free(data);
 }
 

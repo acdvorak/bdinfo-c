@@ -16,7 +16,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _SYSLIMITS_H_
 #include <syslimits.h>
+#endif
+#ifdef _SYS_SYSLIMITS_H_
+#include <sys/syslimits.h>
+#endif
 
 #ifdef	__cplusplus
 extern "C" {
